@@ -1,0 +1,5 @@
+@import url("beta.css");
+@import url("sub/gamma.css");
+body{
+	font-family: sans-serif;
+}
