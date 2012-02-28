@@ -91,6 +91,9 @@ var compile = exports.compile = function(options) {
 	populateConfigPaths(config, paths);
 	console.log(config);
 
+	// update css url() references
+	fixCssUrls(config, paths);	
+
 	// optimize
 	requirejs.optimize(_.extend({}, config, {
 		// optimize copied resources in-place
@@ -121,6 +124,44 @@ function populateConfigPaths(config, paths) {
 			});
 		}
 	});
+}
+
+var cssUrlRegExp = /(url\s*\(\s*['"]?)([^\)]+?)(["']?\s*\))/g;
+
+function fixCssUrls(config, paths) {
+	// loop over css files
+	_.chain(paths).filter(isCss).each(function(to, from) {
+
+		var fileName = path.join(config.dir, to),
+			fileContents = fs.readFileSync(fileName, 'utf-8'),
+			dirname = path.dirname(fileName);
+		console.log('fileName', fileName);
+
+		fileContents = fileContents.replace(cssUrlRegExp, function (fullMatch, prefix, urlMatch, postfix) {
+			console.log('match', fullMatch);
+			// absolute path to the url() file
+			var absolute = path.resolve(dirname, urlMatch);
+			console.log('absolute', absolute);
+			// relative path to the file from the assets root
+			// (this can be looked up in paths)
+			var relative = path.relative(config.dir, absolute);
+			console.log('relative', relative);
+			// absolute path versioned copy of the file
+			var resolved = path.resolve(config.dir, paths[relative]);
+			if(resolved) {
+				console.log('replace', path.relative(dirname, resolved));
+				return prefix + path.relative(dirname, resolved) + postfix;
+			} else {
+				return fullMatch;
+			}
+		});
+		fs.writeFileSync(fileName, fileContents);
+				
+	});
+}
+
+function isCss(fileName){
+	return path.extname(fileName) === '.css';
 }
 
 /**
