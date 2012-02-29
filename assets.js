@@ -6,6 +6,7 @@ var _ = require('underscore'),
 	requirejs = require('requirejs/bin/r'),
 	connect = require('connect'),
 	file,
+	isDevelopment = process.env.NODE_ENV === 'development',
 	defaultConfig = {
 		appDir: 'assets',
 		baseUrl: 'js',
@@ -14,6 +15,8 @@ var _ = require('underscore'),
 			baseUrl: 'css'
 		}
 	};
+
+console.log('isDevelopment='+isDevelopment);
 
 requirejs.tools.useLib(function(requirejs) {
 	file = requirejs('env!env/file');
@@ -36,7 +39,7 @@ module.exports = exports = function assets(options, app) {
  * @param {Function} [app] this connect/express instance will `use` helpers and static
  */
 exports.static = _.wrap(function(options, app) {
-	var instance = connect.static(options.dir);
+	var instance = connect.static(isDevelopment ? options.appDir : options.dir);
 	if(app) {
 		//console.log('started static in', options.dir);
 		app.use(instance);
@@ -49,15 +52,18 @@ exports.static = _.wrap(function(options, app) {
  * @param {String|Object} [config] file name or object
  */
 exports.helpers = _.wrap(function (options, app) {
-	// load path mappings
-	var paths = JSON.parse(fs.readFileSync(path.join(options.dir, '.paths.json')));
-	// add mappings to config for requirejs
-	populateConfigPaths(options, paths);
+	if(! isDevelopment) {
+		// load path mappings
+		var paths = JSON.parse(fs.readFileSync(path.join(options.dir, '.paths.json')));
+		// add mappings to config for requirejs
+		populateConfigPaths(options, paths);
+	}
 	// create helpers
 	var helpers = {
 			css: _.bind(css, null, options, paths),
 			js: _.bind(js, null, options, paths)
 		};
+	// add helpers to app if supported
 	if(app && app.helpers) {
 		app.helpers(helpers);
 	}
@@ -137,24 +143,21 @@ function fixCssUrls(config, paths) {
 		if(isCss(from)) {
 			var fileName = path.join(config.dir, to),
 				fileContents = fs.readFileSync(fileName, 'utf-8'),
-				dirname = path.dirname(fileName);
-			console.log('fileName', fileName);
+				dirname = path.dirname(to); // eg. css, css/sub
+			console.log('fileName', fileName, 'dirname', dirname);
 
 			fileContents = fileContents.replace(cssUrlRegExp, function (fullMatch, prefix, urlMatch, postfix) {
 				if(! isRemoteUrl.test(urlMatch)) {
-					console.log('match', fullMatch, urlMatch);
-					// absolute path to the url() file
-					var absolute = path.resolve(dirname, urlMatch);
-					console.log('absolute', absolute);
+					console.log(' match', fullMatch, urlMatch);
 					// relative path to the file from the assets root
 					// (this can be looked up in paths)
-					var relative = path.relative(config.dir, absolute);
-					console.log('relative', relative);
-					if(paths[relative]) {
+					var resolved = path.join(dirname, urlMatch);
+					console.log('  resolved', resolved);
+					if(paths[resolved]) {
 						// absolute path versioned copy of the file
-						var resolved = path.resolve(config.dir, path.relative(dirname, resolved));
-						console.log('replace', resolved);
-						return prefix + resolved + postfix;
+						var replacement = path.relative(dirname, paths[resolved]);
+						console.log('  replace', replacement);
+						return prefix + replacement + postfix;
 					} else {
 						console.warn(urlMatch + ' can not be resolved from ' + from);
 					}
@@ -227,15 +230,21 @@ function stripExt(filename) {
 }
 
 function css(options, paths, module) {
-	var href = paths[path.join(options.css.baseUrl, module) + '.css'];
+	//TODO: handle external
+	var href = path.join(options.css.baseUrl, module) + '.css';
+	if(! isDevelopment) {
+		// TODO: handle unresolved
+		href = paths[href];
+	}
 	return '<link rel="stylesheet" href="/' + href + '">';
 }
 
 function js(options, paths, module) {
-	var requirejs = options.paths.require,
-		resolvedModule = options.paths[module];
-	return '<script src="'+path.join('/', options.baseUrl, requirejs)+'.js" data-main="' +
-		path.join('/', options.baseUrl, resolvedModule)+ '"></script>';
+	// TODO support absolute url to require.js
+	var requirejs = options.paths.require || 'require';
+	// TODO cache require.config
+	return '<script src="'+path.join('/', options.baseUrl, requirejs)+'.js"></script>\n' +
+		'<script>require.config('+JSON.stringify(options)+');require(["'+module+'"]);</script>';
 }
 
 // called directly from command line
