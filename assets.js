@@ -67,9 +67,8 @@ exports.helpers = _.wrap(function (options, app) {
 /**
  * Prepares assets and opimizes them with r.js
  */
-var compile = exports.compile = function(options) {
-	var config = _.extend({}, defaultConfig, options),
-		paths = {};
+var compile = exports.compile = _.wrap(function(config) {
+	var paths = {};
 
 	// copy tree to output dir
 	file.copyDir(config.appDir, config.dir);
@@ -99,7 +98,7 @@ var compile = exports.compile = function(options) {
 		// optimize copied resources in-place
 		appDir: config.dir
 	}));
-};
+}, prepareArguments);
 
 /**
  * Updates config.paths with versioned paths
@@ -126,37 +125,44 @@ function populateConfigPaths(config, paths) {
 	});
 }
 
-var cssUrlRegExp = /(url\s*\(\s*['"]?)([^\)]+?)(["']?\s*\))/g;
+var cssUrlRegExp = /(url\s*\(\s*['"]?)([^\)]+?)(["']?\s*\))/g,
+	isRemoteUrl = /^(\w+:)?\/\//;
 
+/**
+ * Replaces css url() references to point to the versioned files.
+ */
 function fixCssUrls(config, paths) {
 	// loop over css files
-	_.chain(paths).filter(isCss).each(function(to, from) {
+	_.each(paths, function(to, from) {
+		if(isCss(from)) {
+			var fileName = path.join(config.dir, to),
+				fileContents = fs.readFileSync(fileName, 'utf-8'),
+				dirname = path.dirname(fileName);
+			console.log('fileName', fileName);
 
-		var fileName = path.join(config.dir, to),
-			fileContents = fs.readFileSync(fileName, 'utf-8'),
-			dirname = path.dirname(fileName);
-		console.log('fileName', fileName);
-
-		fileContents = fileContents.replace(cssUrlRegExp, function (fullMatch, prefix, urlMatch, postfix) {
-			console.log('match', fullMatch);
-			// absolute path to the url() file
-			var absolute = path.resolve(dirname, urlMatch);
-			console.log('absolute', absolute);
-			// relative path to the file from the assets root
-			// (this can be looked up in paths)
-			var relative = path.relative(config.dir, absolute);
-			console.log('relative', relative);
-			// absolute path versioned copy of the file
-			var resolved = path.resolve(config.dir, paths[relative]);
-			if(resolved) {
-				console.log('replace', path.relative(dirname, resolved));
-				return prefix + path.relative(dirname, resolved) + postfix;
-			} else {
+			fileContents = fileContents.replace(cssUrlRegExp, function (fullMatch, prefix, urlMatch, postfix) {
+				if(! isRemoteUrl.test(urlMatch)) {
+					console.log('match', fullMatch, urlMatch);
+					// absolute path to the url() file
+					var absolute = path.resolve(dirname, urlMatch);
+					console.log('absolute', absolute);
+					// relative path to the file from the assets root
+					// (this can be looked up in paths)
+					var relative = path.relative(config.dir, absolute);
+					console.log('relative', relative);
+					if(paths[relative]) {
+						// absolute path versioned copy of the file
+						var resolved = path.resolve(config.dir, path.relative(dirname, resolved));
+						console.log('replace', resolved);
+						return prefix + resolved + postfix;
+					} else {
+						console.warn(urlMatch + ' can not be resolved from ' + from);
+					}
+				}
 				return fullMatch;
-			}
-		});
-		fs.writeFileSync(fileName, fileContents);
-				
+			});
+			fs.writeFileSync(fileName, fileContents);
+		}
 	});
 }
 
@@ -169,11 +175,24 @@ function isCss(fileName){
  * Adds defaults.
  */
 function configure(config) {
+	/*jshint evil: true */
 	if(typeof config === 'string') {
-		//TODO: read config file
-	} else {
-		return _.extend({}, defaultConfig, config);
+		var fileContents;
+		try {
+			fileContents = fs.readFileSync(config, 'utf-8');
+		} catch(e) {
+			throw new Error('Can not read config file '+config, e);
+		}
+		try {
+			config = eval('('+fileContents+')');
+		} catch(e) {
+			throw new Error('Invalid config file', e);
+		}
+		if(typeof config !== 'object') {
+			throw new Error('Invalid config file (must be a JavaScript object)');
+		}
 	}
+	return _.extend({}, defaultConfig, config);
 }
 
 function prepareArguments(func, config, app) {
@@ -219,14 +238,12 @@ function js(options, paths, module) {
 		path.join('/', options.baseUrl, resolvedModule)+ '"></script>';
 }
 
-compile({
-	modules: [
-		{
-			name: 'alpha'
-		}
-	],
-	paths: {
-		mappedSub: 'sub/mapped'
+// called directly from command line
+if(require.main === module) {
+	if(process.argv.length === 3) {
+		compile(process.argv[2]);
+	} else {
+		console.err('Missing config file argument');
+		process.exit(1);
 	}
-});
-
+}

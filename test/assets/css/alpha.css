@@ -1,5 +1,9 @@
+@import url("http://yui.yahooapis.com/combo?2.9.0/build/reset/reset-min.css&2.9.0/build/base/base-min.css");
 @import url("beta.css");
 @import url("sub/gamma.css");
 body{
 	font-family: sans-serif;
+}
+p {
+	background: url("../img/alpha.jpg") no-repeat 0 0;
 }
