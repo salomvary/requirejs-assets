@@ -6,7 +6,7 @@ var _ = require('underscore'),
 	requirejs = require('requirejs/bin/r'),
 	connect = require('connect'),
 	file,
-	isDevelopment = process.env.NODE_ENV === 'development',
+	isProduction = process.env.NODE_ENV === 'production',
 	defaultConfig = {
 		appDir: 'assets',
 		baseUrl: 'js',
@@ -15,8 +15,6 @@ var _ = require('underscore'),
 			baseUrl: 'css'
 		}
 	};
-
-console.log('isDevelopment='+isDevelopment);
 
 requirejs.tools.useLib(function(requirejs) {
 	file = requirejs('env!env/file');
@@ -39,12 +37,11 @@ module.exports = exports = function assets(options, app) {
  * @param {Function} [app] this connect/express instance will `use` helpers and static
  */
 exports.static = _.wrap(function(options, app) {
-	var instance = connect.static(isDevelopment ? options.appDir : options.dir, {
+	var instance = connect.static(isProduction ? options.dir : options.appDir, {
 		// cache for one year
 		maxAge: 365*24*60*60*1000
 	});
 	if(app) {
-		//console.log('started static in', options.dir);
 		app.use(instance);
 	}
 	return instance;
@@ -55,7 +52,7 @@ exports.static = _.wrap(function(options, app) {
  * @param {String|Object} [config] file name or object
  */
 exports.helpers = _.wrap(function (options, app) {
-	if(! isDevelopment) {
+	if(isProduction) {
 		// load path mappings
 		var paths = JSON.parse(fs.readFileSync(path.join(options.dir, '.paths.json')));
 		// add mappings to config for requirejs
@@ -182,6 +179,9 @@ function isCss(fileName){
  */
 function configure(config) {
 	/*jshint evil: true */
+	if(typeof config === 'undefined' && path.existsSync('assets/config.js')) {
+		config = 'assets/config.js';
+	}
 	if(typeof config === 'string') {
 		var fileContents;
 		try {
@@ -235,7 +235,7 @@ function stripExt(filename) {
 function css(options, paths, module) {
 	//TODO: handle external
 	var href = path.join(options.css.baseUrl, module) + '.css';
-	if(! isDevelopment) {
+	if(isProduction) {
 		// TODO: handle unresolved
 		href = paths[href];
 	}
@@ -252,10 +252,5 @@ function js(options, paths, module) {
 
 // called directly from command line
 if(require.main === module) {
-	if(process.argv.length === 3) {
-		compile(process.argv[2]);
-	} else {
-		console.err('Missing config file argument');
-		process.exit(1);
-	}
+	compile(process.argv[2]);
 }
