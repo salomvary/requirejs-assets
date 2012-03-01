@@ -39,7 +39,10 @@ module.exports = exports = function assets(options, app) {
  * @param {Function} [app] this connect/express instance will `use` helpers and static
  */
 exports.static = _.wrap(function(options, app) {
-	var instance = connect.static(isDevelopment ? options.appDir : options.dir);
+	var instance = connect.static(isDevelopment ? options.appDir : options.dir, {
+		// cache for one year
+		maxAge: 365*24*60*60*1000
+	});
 	if(app) {
 		//console.log('started static in', options.dir);
 		app.use(instance);
