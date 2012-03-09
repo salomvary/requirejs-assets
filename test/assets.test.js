@@ -39,12 +39,12 @@ var outputFiles = [ 'assets-optimized/build.txt',
   'assets-optimized/img/alpha-74794563ab6750654ee32dedc45bebab.jpg',
   'assets-optimized/img/beta-ff738f69127edc98d4389aa421517cbe.jpg',
   'assets-optimized/img/sub/gamma-2b7ef65dcb9607840ca2ea9e3d52b49b.jpg',
-  'assets-optimized/js/alpha-a0f603c60c71e35676b47cc733549c6f.js',
-  'assets-optimized/js/beta-9fb9ddb584e7404efbfc5b679a446ff6.js',
-  'assets-optimized/js/lazyloaded-28de7cee6be4227075efad9d1d9892fb.js',
+  'assets-optimized/js/alpha-9f1a9996be0155577843d216bbfc166a.js',
+  'assets-optimized/js/beta-ee0c077c6f4cc4ac73643a2cd50b6ef1.js',
+  'assets-optimized/js/lazyloaded-0aa2d4f8875e9ceda901e4e7625c9e53.js',
   'assets-optimized/js/require-5d8ec2c595f444741f9ff284639b05f2.js',
-  'assets-optimized/js/sub/gamma-d454aa33f134d3741b5db79e29da096d.js',
-  'assets-optimized/js/sub/mapped-4bf8779c725f89a383e77ef5440a08aa.js' ];
+  'assets-optimized/js/sub/gamma-6ea3f100d1131020eaf3a89c7a11453d.js',
+  'assets-optimized/js/sub/mapped-daa87f2ef831839271203070756f48d3.js' ];
 
 exports.cssUrlRegExp = function(test) {
 	test.expect(10);
@@ -92,17 +92,16 @@ exports.compile['compile and check the copied tree'] = function(test) {
 	delete require.cache[require.resolve('requirejs/bin/r.js')];
 	requirejs = require('requirejs');
 
-	test.done();
-
 	// can requirejs use the output?
-	/* fails yet
 	requirejs.config(_.extend({}, this.assets.config, {
 		baseUrl: path.join(this.assets.config.dir, this.assets.config.baseUrl)
 	}));
 
 	requirejs(['alpha'], function(alpha) {
 		alpha();
-		test.done();
+		requirejs(['lazyloaded'], function(lazyloaded) {
+			lazyloaded();
+			test.done();
+		});
 	});
-	*/
 };

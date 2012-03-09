@@ -5,6 +5,6 @@ define(['beta', 'mappedSub'], function(beta, mapped) {
 		lazyloaded();
 	});
 	return function() {
-		console.log('this is alpha');
+		return 'this is alpha';
 	};
 });
