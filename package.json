@@ -10,9 +10,10 @@
 		"express": "2.5.x",
 		"jade": "0.20.x",
 		"nodeunit": "1.0.x",
-		"rimraf": "2.0.x"
+		"rimraf": "2.0.x",
+		"request": "2.9.x"
 	},
 	"scripts": {
-		"test": "nodeunit test/assets.test.js"
+		"test": "cd test; nodeunit assets.test.js"
 	}
 }

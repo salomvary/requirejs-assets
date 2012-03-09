@@ -1,16 +1,20 @@
-var assets = require('../assets.js'),
+/*jshint es5:true */
+var Assets = require('../assets.js'),
+	assets = require('../helpers.js'),
 	path = require('path'),
 	_ = require('underscore'),
 	requirejs = require('requirejs'),
 	rimraf = require('rimraf'),
 	sandbox = require('nodeunit').utils.sandbox,
+	app = require('./express.js'),
+	request = require('request'),
 	file;
 
 requirejs.tools.useLib(function(requirejs) {
 		file = requirejs('env!env/file');
 });
 
-var sandboxed = sandbox('assets.js', {
+var sandboxed = sandbox('../assets.js', {
 	exports: {}, 
 	module: {}, 
 	require: require,
@@ -29,7 +33,7 @@ var config = {
 	}
 };
 
-var configWithDefaults = new sandboxed.Assets(config).config;
+var configWithDefaults = new Assets(config).config;
 
 var outputFiles = [ 'assets-optimized/build.txt',
   'assets-optimized/config-f0c50f456ac3c9b3a8e5b8f7e7e04646.js',
@@ -63,21 +67,18 @@ exports.cssUrlRegExp = function(test) {
 	test.done();
 };
 
+/**
+ * compiler tests
+ */
 exports.compile = {
-	setUp: function(callback) {
-		this.cwd = process.cwd();
-		process.chdir(__dirname);
-		callback();
-	},
 	tearDown: function(callback) {
 		rimraf.sync(configWithDefaults.dir);
-		process.chdir(this.cwd);
 		callback();
 	}
 };
 
 exports.compile['compile and check the copied tree'] = function(test) {
-	this.assets = new sandboxed.Assets(config);
+	this.assets = new Assets(config);
 	this.assets.compile();
 
 	// output files
@@ -103,5 +104,27 @@ exports.compile['compile and check the copied tree'] = function(test) {
 			lazyloaded();
 			test.done();
 		});
+	});
+};
+
+/**
+ * static server tests
+ */
+exports.static = {
+	setUp: function(callback) {
+		app.listen(3001);
+		callback();
+	},
+	tearDown: function(callback) {
+		app.close();
+		callback();
+	}
+};
+
+exports.static['serve static files'] = function(test) {
+	request('http://localhost:3001/js/alpha.js', function(err, res, body) {
+		test.ifError(err);
+		test.equal(res.statusCode, 200);
+		test.done();
 	});
 };
