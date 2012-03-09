@@ -178,7 +178,7 @@ function Helpers(assets, optimized) {
  */
 Helpers.prototype.css = function(module) {
 	//TODO: handle external
-	var href = path.join(this.assets.options.css.baseUrl, module) + '.css';
+	var href = path.join(this.assets.config.css.baseUrl, module) + '.css';
 	if(this.optimized) {
 		// TODO: handle unresolved
 		href = this.assets.paths[href];
@@ -192,10 +192,10 @@ Helpers.prototype.css = function(module) {
  */
 Helpers.prototype.js = function(module) {
 	// TODO support absolute url to require.js
-	var requirejs = this.assets.options.paths.require || 'require';
+	var requirejs = this.assets.config.paths.require || 'require';
 	// TODO cache require.config
-	return '<script src="'+path.join('/', this.helpers.options.baseUrl, requirejs)+'.js"></script>\n' +
-		'<script>require.config('+JSON.stringify(this.assets.options)+');require(["'+module+'"]);</script>';
+	return '<script src="'+path.join('/', this.assets.config.baseUrl, requirejs)+'.js"></script>\n' +
+		'<script>require.config('+JSON.stringify(this.assets.config)+');require(["'+module+'"]);</script>';
 };
 
 /** 
@@ -205,8 +205,8 @@ Helpers.prototype.js = function(module) {
  */
 module.exports = exports = _.wrap(function(assets, app) {
 	return {
-		static: exports.static(options, app),
-		helpers: exports.helpers(options, app)
+		static: exports.static(assets, app),
+		helpers: exports.helpers(assets, app)
 	};
 }, prepareArguments);
 
@@ -216,7 +216,7 @@ module.exports = exports = _.wrap(function(assets, app) {
  * @param {Function} [app] this connect/express instance will `use` static
  */
 exports.static = _.wrap(function(assets, app) {
-	var instance = connect.static(isProduction ? assets.options.dir : assets.options.appDir, {
+	var instance = connect.static(isProduction ? assets.config.dir : assets.config.appDir, {
 		// cache for one year
 		maxAge: 365*24*60*60*1000
 	});
@@ -261,7 +261,7 @@ function prepareArguments(func, assets, app) {
 		assets = undefined;
 	}
 	// not an Assets instance passed, then it's a config
-	if(! assets instanceof Assets) {
+	if(! (assets instanceof Assets)) {
 		assets = new Assets(assets);
 	}
 	//call wrapped function
