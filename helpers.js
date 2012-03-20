@@ -11,7 +11,15 @@ var	isProduction = process.env.NODE_ENV === 'production';
  */
 function Helpers(assets, optimized) {
 	this.assets = assets;
-	this.optimized = optimized;
+	if(optimized) {
+		try {
+			this.assets.readPaths();
+			this.assets.populateConfigPaths();
+			this.optimized = true;
+		} catch(e) {
+			console.warn('optimized resources could not be found');
+		}
+	}
 }
 
 /**
@@ -35,9 +43,12 @@ Helpers.prototype.css = function(module) {
 Helpers.prototype.js = function(module) {
 	// TODO support absolute url to require.js
 	var requirejs = this.assets.config.paths.require || 'require';
+	var href = path.join(this.assets.config.baseUrl, requirejs)+'.js';
 	// TODO cache require.config
-	return '<script src="'+path.join('/', this.assets.config.baseUrl, requirejs)+'.js"></script>\n' +
-		'<script>require.config('+JSON.stringify(this.assets.config)+');require(["'+module+'"]);</script>';
+	return '<script src="/' + href + '"></script>\n' +
+		'<script>require.config(' + 
+		JSON.stringify(this.assets.config) + 
+		');require(["' + module + '"]);</script>';
 };
 
 /** 
