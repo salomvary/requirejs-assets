@@ -1,11 +1,15 @@
+//detect node environment
+var node = (typeof exports !== 'undefined' && typeof module !== 'undefined');
+
 //nodejs
-if(typeof require !== 'undefined') {
+if(node) {
 	var requirejs = require('requirejs/bin/r'),
 		define = requirejs.define;
 	requirejs.tools.useLib(function(internal) {
 		requirejs = internal;
 	});
 }
+
 //rhino
 if(typeof JSON === 'undefined') {
 	requirejs(['./json2']);
@@ -24,7 +28,7 @@ define('rhino/md5', function() {
 	return function(data) {
 		var digest = java.security.MessageDigest.getInstance("MD5")
 			.digest(new java.lang.String(data).getBytes());
-		return new java.lang.BigInteger(1, digest).toString(16);
+		return new java.math.BigInteger(1, digest).toString(16);
 	};
 });
 
@@ -284,7 +288,7 @@ function extend(target) {
 }
 
 // node
-if(typeof exports !== 'undefined' && typeof module !== 'undefined') {
+if(node) {
 	module.exports = Assets;
 
 	/**
