@@ -44,6 +44,12 @@ var outputFiles =[ 'assets-optimized/.paths.json',
   'assets-optimized/js/sub/gamma-6ea3f100d1131020eaf3a89c7a11453d.js',
   'assets-optimized/js/sub/mapped-daa87f2ef831839271203070756f48d3.js' ];
 
+var rewrittenUrls = 
+	{ 'assets-optimized/css/alpha-020052158f873a8a7b47363a9fdff855.css': '../img/alpha-500d2aa292a1133117c5f89ae63d1fad.jpg',
+		'assets-optimized/css/beta-9e465e2949a59e104e58ad1ed77b76bb.css': '../img/beta-c3a37c267a3bff935a9d3ee5f9922656.jpg',
+		'assets-optimized/css/sub/gamma-810c5d7bf65fa7401e5b2e056870e8af.css': '../../img/sub/gamma-d61bc2150501dcbe0b2d15241b9382b3.jpg' };
+
+
 /**
  * util tests
  */
@@ -176,6 +182,20 @@ exports.compile['compile and check the copied tree'] = function(test) {
 
 	// is the output the expected?
 	test.deepEqual(fileNames, outputFiles);
+
+	// check rewritten css urls
+	var urls = {};
+	_.chain(fileNames).filter(function(file) {return util.getExt(file) === 'css';}).each(function(fileName) {
+		var contents = file.readFile(fileName, 'utf-8');
+		var match;
+		while((match = util.cssUrlRegExp.exec(contents))) {
+			if(! urls[fileName]) {
+				urls[fileName] = [];
+			}
+			urls[fileName] = match[2];
+		}
+	});
+	test.deepEqual(urls, rewrittenUrls);
 
 	// flush requirejs internal cache to make requirejs work below
 	// TODO: find a better way to do that
