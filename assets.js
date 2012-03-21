@@ -12,7 +12,7 @@ if(node) {
 
 //rhino
 if(typeof JSON === 'undefined') {
-	requirejs(['./json2']);
+	requirejs(['json2']);
 }
 
 define('node/md5', function() {
