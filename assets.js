@@ -1,19 +1,17 @@
-//detect node environment
-var node = (typeof exports !== 'undefined' && typeof module !== 'undefined');
+var requirejs, rjs, define;
 
-//nodejs
-if(node) {
-	var requirejs = require('requirejs/bin/r'),
-		define = requirejs.define;
-	requirejs.tools.useLib(function(internal) {
-		requirejs = internal;
-	});
+try {
+	// try local copy first
+	rjs = require('r');
+} catch(e) {
+	rjs = require('requirejs/bin/r');
 }
 
-//rhino
-if(typeof JSON === 'undefined') {
-	requirejs(['json2']);
-}
+define = rjs.define;
+
+rjs.tools.useLib(function(internal) {
+	requirejs = internal;
+});
 
 define('node/md5', function() {
 	return function(data) {
@@ -287,33 +285,22 @@ function extend(target) {
 	return target;
 }
 
-// node
-if(node) {
-	module.exports = Assets;
+module.exports = Assets;
 
-	/**
-	 * Prepares assets and opimizes them with r.js
-	 */
-	exports.compile = function(config) {
-		new Assets(config).compile();
-	};
+/**
+ * Prepares assets and opimizes them with r.js
+ */
+exports.compile = function(config) {
+	new Assets(config).compile();
+};
 
-	/**
-	 * Command line usage: node assets.js configFile
-	 */
-	if(require.main === module) {
-		exports.compile(process.argv[2]);
-	}
-} 
-// rhino
-else {
-	// no "exports" yet
-
-	/**
-	 * Command line usage: rhino assets.js configFile
-	 */
-	new Assets(arguments[0]).compile();
-	
+/**
+ * Command line usage: 
+ * node assets.js configFile
+ * rhino -modules r.js -main assets.js
+ */
+if(require.main === module) {
+	exports.compile(typeof process !== 'undefined' ? process.argv[2] : arguments[0]);
 }
 
 });
