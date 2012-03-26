@@ -1,11 +1,14 @@
 var requirejs, rjs, define;
 
-try {
-	// try local copy first
-	rjs = require('r');
-} catch(e) {
-	rjs = require('requirejs/bin/r');
-}
+// try different ids to load r.js
+// - Rhino jar packed
+// - local copy
+// - npm installed
+['/r', './r', 'requirejs/bin/r'].some(function(id) {
+	try {
+		return (rjs = require(id));
+	} catch(e) {}
+});
 
 define = rjs.define;
 
