@@ -129,8 +129,8 @@ var Assets = function(config) {
  */
 Assets.prototype.configure = function(config) {
 	/*jshint evil: true */
-	if(typeof config === 'undefined' && file.exists('assets/config.js')) {
-		config = 'assets/config.js';
+	if(typeof config === 'undefined' && file.exists('build.js')) {
+		config = 'build.js';
 	}
 	if(typeof config === 'string') {
 		var fileContents;
