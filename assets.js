@@ -133,7 +133,8 @@ Assets.prototype.configure = function(config) {
 		config = 'build.js';
 	}
 	if(typeof config === 'string') {
-		var fileContents;
+		var fileContents,
+			absFilePath = file.absPath(file.parent(config));
 		try {
 			fileContents = file.readFile(config, 'utf-8');
 		} catch(e) {
@@ -148,7 +149,15 @@ Assets.prototype.configure = function(config) {
 			throw new Error('Invalid config file (must be a JavaScript object)');
 		}
 	}
-	this.config = extend({}, defaultConfig, config);
+
+	// add defaults
+	config = extend({}, defaultConfig, config);
+
+	// we'll need these fixed before r.js does it
+	['appDir', 'dir'].forEach(function(k) {
+		config[k] = build.makeAbsPath(config[k], absFilePath);
+	});
+	this.config = config;
 };
 
 Assets.prototype.compile = function() {
