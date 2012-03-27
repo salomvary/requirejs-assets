@@ -148,6 +148,8 @@ Assets.prototype.configure = function(config) {
 		if(typeof config !== 'object') {
 			throw new Error('Invalid config file (must be a JavaScript object)');
 		}
+	} else {
+		absFilePath = file.absPath('.');
 	}
 
 	// add defaults
