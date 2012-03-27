@@ -1,4 +1,4 @@
-var requirejs, rjs, define;
+var requirejs, rjs, define, args = arguments;
 
 // try different ids to load r.js
 // - Rhino jar packed
@@ -312,8 +312,9 @@ exports.compile = function(config) {
  * rhino -modules r.js -main assets.js
  */
 if(require.main === module) {
-	exports.compile(typeof process !== 'undefined' ? process.argv[2] : arguments[0]);
+	exports.compile(typeof process !== 'undefined' ? process.argv[2] : args[0]);
 }
+
 
 });
 
