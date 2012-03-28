@@ -110,7 +110,7 @@ requirejs(['env!env/file','env!env/md5', 'env!env/print', 'build', 'util'], func
 var	defaultConfig = {
 	appDir: 'assets',
 	baseUrl: 'js',
-	dir: 'assets-optimized',
+	dir: 'assets',
 	css: {
 		baseUrl: 'css'
 	}
@@ -163,8 +163,17 @@ Assets.prototype.configure = function(config) {
 };
 
 Assets.prototype.compile = function() {
+	// check if target is the input (appDir)
+	// or contains already optimized files
+	var workDir = this.config.dir;
+	if(workDir === this.config.appDir || file.exists(util.join(workDir, '.paths.json'))) {
+		// FIXME still won't work if both above are true -> should fail?
+		// poor man's temp folder to avoid double optimization
+		workDir = util.join(workDir, 'tmp-'+(+new Date()));
+	}
+
 	// copy tree to output dir
-	var fileNames = file.copyDir(this.config.appDir, this.config.dir);
+	var fileNames = file.copyDir(this.config.appDir, workDir);
 	// fileNames will be appDir/path
 	if(!fileNames) {
 		throw new Error('no files copied, check appDir!');
@@ -176,15 +185,15 @@ Assets.prototype.compile = function() {
 	for(var i = 0; i<fileNames.length; i++) {
 		var optimizedPath = md5Filenamer(fileNames[i]);
 		//print(fileNames[i] +' > '+optimizedPath);
-		this.paths[fileNames[i].substring(this.config.dir.length + 1)] =
-			optimizedPath.substring(this.config.dir.length + 1);
+		this.paths[fileNames[i].substring(workDir.length + 1)] =
+			optimizedPath.substring(workDir.length + 1);
 	}
 
 	// dump path -> versioned path mappings to file
 	this.writePaths();
 
 	// update css url() references
-	this.fixCssUrls();	
+	this.fixCssUrls(workDir);	
 
 	// update config for optimizer	
 	this.populateConfigPaths();
@@ -192,8 +201,15 @@ Assets.prototype.compile = function() {
 	// run optimizer
 	build(extend({}, this.config, {
 		// optimize copied resources in-place
-		appDir: this.config.dir
+		dir: workDir,
+		appDir: workDir
 	}));
+
+	// move optimized tree to its final destination
+	if(workDir !== this.config.dir) {
+		file.copyDir(workDir, this.config.dir);
+		file.deleteFile(workDir);
+	}
 };
 
 Assets.prototype.writePaths = function() {
@@ -210,12 +226,12 @@ Assets.prototype.readPaths = function() {
 /**
  * Replaces css url() references to point to the versioned files.
  */
-Assets.prototype.fixCssUrls = function() {
+Assets.prototype.fixCssUrls = function(workDir) {
 	// loop over css files
 	for(var from in this.paths) {
 		var to = this.paths[from];
 		if(util.getExt(from) === 'css') {
-			var fileName = this.config.dir + '/' + to,
+			var fileName = workDir + '/' + to,
 				fileContents = file.readFile(fileName, 'utf-8'),
 				dirname = util.getParent(to), // eg. css, css/sub
 				paths = this.paths;
