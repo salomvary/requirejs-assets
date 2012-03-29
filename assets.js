@@ -136,7 +136,7 @@ Assets.prototype.configure = function(config) {
 		var fileContents,
 			absFilePath = file.absPath(file.parent(config));
 		try {
-			fileContents = file.readFile(config, 'utf-8');
+			fileContents = file.readFile(config);
 		} catch(e) {
 			throw new Error('Can not read config file '+config, e);
 		}
@@ -195,8 +195,31 @@ Assets.prototype.compile = function() {
 	// update css url() references
 	this.fixCssUrls(workDir);	
 
+	// get js path mappings (without baseUrl prefix and extension)
+	var length = this.config.baseUrl.length + 1;
+	var jsPaths = this.filterPaths(function(from, to, filtered) {
+		if(util.getExt(from) === 'js') {
+			// remove js/ and extension from js/foo/bar/baz.js
+			var fromPath = util.stripExt(from.substring(length)),
+				toPath = util.stripExt(to.substring(length));
+			filtered[fromPath] = toPath;
+		}
+	});
+
 	// update config for optimizer	
-	this.populateConfigPaths();
+	this.populateConfigPaths(jsPaths);
+
+	// create requirejs.config(jsPaths) in require.js
+	var configTargetPath = util.join(workDir, this.config.baseUrl, jsPaths.require) + '.js';
+	if(file.exists(configTargetPath)) {
+		var configContents = file.readFile(configTargetPath);
+		configContents += ';require.config({paths:' +
+			JSON.stringify(jsPaths) +
+			'});';
+		file.saveFile(configTargetPath, configContents);
+	} else {
+		print('require.js could not be found, skipped require.config(...) '+configTargetPath);
+	}
 
 	// run optimizer
 	build(extend({}, this.config, {
@@ -232,7 +255,7 @@ Assets.prototype.fixCssUrls = function(workDir) {
 		var to = this.paths[from];
 		if(util.getExt(from) === 'css') {
 			var fileName = workDir + '/' + to,
-				fileContents = file.readFile(fileName, 'utf-8'),
+				fileContents = file.readFile(fileName),
 				dirname = util.getParent(to), // eg. css, css/sub
 				paths = this.paths;
 
@@ -262,7 +285,8 @@ Assets.prototype.fixCssUrls = function(workDir) {
 /**
  * Updates requirejs config.paths with versioned paths
  */
-Assets.prototype.populateConfigPaths = function() {
+Assets.prototype.populateConfigPaths = function(jsPaths) {
+	// TODO: use r.js internal implementation of the same functionality
 	//keep a reversed copy of original path mappings
 	var configPaths = {}, from, to;
 	for(from in this.config.paths) {
@@ -275,20 +299,23 @@ Assets.prototype.populateConfigPaths = function() {
 
 	//add all versioned js files to config.paths
 	this.config.paths = {};
-	for(from in this.paths) {
-		to = this.paths[from];
-		if(util.getExt(from) === 'js') {
-			// remove js/ and extension from js/foo/bar/baz.js
-			var fromPath = util.stripExt(from.substring(this.config.baseUrl.length + 1)),
-				toPath = util.stripExt(to.substring(this.config.baseUrl.length + 1));
-			// if there was/were an original mapping/s, update that to point to the versioned
-			// copy, add a new entry otherwise
-			var mappings = configPaths[fromPath] || [fromPath];
-			for(var i=0; i<mappings.length; i++) {
-				this.config.paths[mappings[i]] = toPath;
-			}
+	for(from in jsPaths) {
+		to = jsPaths[from];
+		// if there was/were an original mapping/s, update that to point to the versioned
+		// copy, add a new entry otherwise
+		var mappings = configPaths[from] || [from];
+		for(var i=0; i<mappings.length; i++) {
+			this.config.paths[mappings[i]] = to;
 		}
 	}
+};
+
+Assets.prototype.filterPaths = function(filter) {
+	var filtered = {};
+	Object.keys(this.paths).forEach(function(key) {
+		filter(key, this[key], filtered);
+	}, this.paths);
+	return filtered;
 };
 
 // internals

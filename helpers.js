@@ -14,7 +14,6 @@ function Helpers(assets, optimized) {
 	if(optimized) {
 		try {
 			this.assets.readPaths();
-			this.assets.populateConfigPaths();
 			this.optimized = true;
 		} catch(e) {
 			console.warn('optimized resources could not be found');
@@ -27,7 +26,7 @@ function Helpers(assets, optimized) {
  * @returns properly assembled <link rel="stylesheet"/>
  */
 Helpers.prototype.css = function(module) {
-	//TODO: handle externa
+	//TODO: handle external
 	var href = path.join(this.assets.config.css.baseUrl, module) + '.css';
 	if(this.optimized) {
 		// TODO: handle unresolved
@@ -42,13 +41,15 @@ Helpers.prototype.css = function(module) {
  */
 Helpers.prototype.js = function(module) {
 	// TODO support absolute url to require.js
-	var requirejs = this.assets.config.paths.require || 'require';
-	var href = path.join(this.assets.config.baseUrl, requirejs)+'.js';
-	// TODO cache require.config
-	return '<script src="/' + href + '"></script>\n' +
-		'<script>require.config(' + 
-		JSON.stringify(this.assets.config) + 
-		');require(["' + module + '"]);</script>';
+	var requirejs = path.join(this.assets.config.baseUrl, 'require') + '.js';
+	module = path.join(this.assets.config.baseUrl, module) + '.js';
+	if(this.optimized) {
+		// TODO: handle unresolved
+		requirejs = this.assets.paths[requirejs];
+		module = this.assets.paths[module];
+	}
+		
+	return '<script src="/' + requirejs + '" data-main="'+module+'"></script>\n';
 };
 
 /** 
