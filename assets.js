@@ -179,6 +179,13 @@ Assets.prototype.compile = function() {
 		throw new Error('no files copied, check appDir!');
 	}
 
+	// run optimizer
+	build(extend({}, this.config, {
+		// optimize copied resources in-place
+		dir: workDir,
+		appDir: workDir
+	}));
+
 	// rename every file to md5 versioned,
 	// record renames in paths
 	this.paths = {};
@@ -206,9 +213,6 @@ Assets.prototype.compile = function() {
 		}
 	});
 
-	// update config for optimizer	
-	this.populateConfigPaths(jsPaths);
-
 	// create requirejs.config(jsPaths) in require.js
 	var configTargetPath = util.join(workDir, this.config.baseUrl, jsPaths.require) + '.js';
 	if(file.exists(configTargetPath)) {
@@ -221,12 +225,6 @@ Assets.prototype.compile = function() {
 		print('require.js could not be found, skipped require.config(...) '+configTargetPath);
 	}
 
-	// run optimizer
-	build(extend({}, this.config, {
-		// optimize copied resources in-place
-		dir: workDir,
-		appDir: workDir
-	}));
 
 	// move optimized tree to its final destination
 	if(workDir !== this.config.dir) {
